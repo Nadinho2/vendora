@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LogOut, Menu, Search, ShoppingBag, User } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +21,22 @@ import { getSupabaseEnvIssue } from "@/lib/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function SiteHeader() {
+  return (
+    <Suspense
+      fallback={
+        <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/50">
+          <div className="mx-auto max-w-6xl px-4">
+            <div className="flex h-16 items-center" />
+          </div>
+        </header>
+      }
+    >
+      <SiteHeaderInner />
+    </Suspense>
+  );
+}
+
+function SiteHeaderInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
