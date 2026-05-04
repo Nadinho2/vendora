@@ -65,16 +65,19 @@ function SiteHeaderInner() {
       if (userId) {
         void supabase
           .from("profiles")
-          .select("is_admin,role")
+          .select("is_super_admin,is_admin,role")
           .eq("id", userId)
           .maybeSingle()
           .then(({ data: profile }) => {
             if (cancelled) return;
             const profileValue = profile as
-              | { is_admin?: boolean | null; role?: string | null }
+              | { is_super_admin?: boolean | null; is_admin?: boolean | null; role?: string | null }
               | null;
             const role = (profileValue?.role ?? "").toLowerCase();
-            const isAdminValue = role === "admin" || profileValue?.is_admin === true;
+            const isAdminValue =
+              profileValue?.is_super_admin === true ||
+              role === "admin" ||
+              profileValue?.is_admin === true;
             setIsAdmin(isAdminValue);
           });
       } else {

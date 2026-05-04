@@ -36,7 +36,7 @@ export default async function AdminLayout({
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("is_admin,role")
+    .select("is_super_admin,is_admin,role")
     .eq("id", userId)
     .maybeSingle();
 
@@ -61,9 +61,14 @@ export default async function AdminLayout({
     );
   }
 
-  const profileValue = profile as { is_admin?: boolean | null; role?: string | null } | null;
+  const profileValue = profile as
+    | { is_super_admin?: boolean | null; is_admin?: boolean | null; role?: string | null }
+    | null;
   const role = (profileValue?.role ?? "").toLowerCase();
-  const isAdmin = role === "admin" || profileValue?.is_admin === true;
+  const isAdmin =
+    profileValue?.is_super_admin === true ||
+    role === "admin" ||
+    profileValue?.is_admin === true;
 
   if (!isAdmin) {
     return (
@@ -76,8 +81,8 @@ export default async function AdminLayout({
           <div className="mt-4 rounded-2xl border border-border/60 bg-muted/20 p-4 text-xs text-muted-foreground">
             <div>Signed in as: {data.user?.email ?? userId}</div>
             <div className="mt-1">
-              Profile admin flags: role={profileValue?.role ?? "null"}, is_admin=
-              {String(profileValue?.is_admin ?? null)}
+              Profile admin flags: role={profileValue?.role ?? "null"}, is_super_admin=
+              {String(profileValue?.is_super_admin ?? null)}, is_admin={String(profileValue?.is_admin ?? null)}
             </div>
           </div>
           <div className="mt-6">
