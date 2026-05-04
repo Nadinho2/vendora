@@ -64,8 +64,7 @@ async function requireAdmin() {
 
   const profileRow = profile as ProfileRow;
   const role = (profileRow.role ?? "").toLowerCase();
-  const profileAny = profileRow as unknown as { is_super_admin?: boolean | null };
-  const isAdmin = profileAny.is_super_admin === true || role === "admin" || profileRow.is_admin === true;
+  const isAdmin = role === "admin" || profileRow.is_admin === true;
 
   if (!isAdmin) return err("Forbidden");
   return ok({ client, user, profile: profileRow });

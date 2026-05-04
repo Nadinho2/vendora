@@ -31,18 +31,13 @@ export default async function AdminHomePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_super_admin,is_admin,role")
+    .select("is_admin,role")
     .eq("id", userId)
     .maybeSingle();
 
-  const profileValue = profile as
-    | { is_super_admin?: boolean | null; is_admin?: boolean | null; role?: string | null }
-    | null;
+  const profileValue = profile as { is_admin?: boolean | null; role?: string | null } | null;
   const role = (profileValue?.role ?? "").toLowerCase();
-  const isAdmin =
-    profileValue?.is_super_admin === true ||
-    role === "admin" ||
-    profileValue?.is_admin === true;
+  const isAdmin = role === "admin" || profileValue?.is_admin === true;
   if (!isAdmin) redirect("/");
 
   redirect("/admin/orders");
