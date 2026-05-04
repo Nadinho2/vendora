@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export function SiteFooter() {
   return (
     <footer className="border-t border-border/60 bg-background/30 backdrop-blur supports-[backdrop-filter]:bg-background/20">
@@ -9,9 +7,6 @@ export function SiteFooter() {
           <div className="text-xs">BUY BETTER WITH VENDORA</div>
         </div>
         <div className="flex items-center gap-5">
-          <Link href="/admin/import" className="hover:text-foreground">
-            Admin
-          </Link>
           <a
             href="https://vercel.com"
             target="_blank"

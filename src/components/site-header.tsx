@@ -197,7 +197,7 @@ function SiteHeaderInner() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/admin/products">Admin</Link>
+                        <Link href="/admin">Admin</Link>
                       </DropdownMenuItem>
                     </>
                   ) : null}

@@ -85,7 +85,7 @@ export default async function AccountPage() {
           <div className="mt-4 space-y-2">
             {isAdmin ? (
               <Button asChild variant="outline" className="w-full rounded-2xl">
-                <Link href="/admin/products">Admin products</Link>
+                <Link href="/admin">Admin</Link>
               </Button>
             ) : null}
             <form action={signOut}>

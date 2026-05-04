@@ -91,7 +91,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          status: "pending" | "paid" | "cancelled";
+          status: "pending" | "confirmed" | "approved" | "sent" | "delivered" | "paid" | "cancelled";
           total: number;
           currency: string;
           shipping_address: Json | null;
@@ -101,7 +101,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
-          status?: "pending" | "paid" | "cancelled";
+          status?: "pending" | "confirmed" | "approved" | "sent" | "delivered" | "paid" | "cancelled";
           total: number;
           currency?: string;
           shipping_address?: Json | null;
@@ -111,7 +111,7 @@ export type Database = {
         Update: {
           id?: string;
           user_id?: string;
-          status?: "pending" | "paid" | "cancelled";
+          status?: "pending" | "confirmed" | "approved" | "sent" | "delivered" | "paid" | "cancelled";
           total?: number;
           currency?: string;
           shipping_address?: Json | null;

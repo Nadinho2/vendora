@@ -115,7 +115,15 @@ const OrderCreateSchema = z.object({
   payment_method: z.string().optional(),
 });
 
-const OrderStatusSchema = z.enum(["pending", "paid", "cancelled"]);
+const OrderStatusSchema = z.enum([
+  "pending",
+  "confirmed",
+  "approved",
+  "sent",
+  "delivered",
+  "paid",
+  "cancelled",
+]);
 
 export async function signUpWithEmail(input: {
   email: string;
@@ -682,6 +690,99 @@ export async function updateOrderStatus(input: { orderId: string; status: string
   });
 
   revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${parsed.data.orderId}`);
   revalidatePath(`/orders/${parsed.data.orderId}`);
   return ok({ order: order as OrderRow });
+}
+
+export async function createAdminOrder(input: unknown): Promise<ActionResult<{ orderId: string }>> {
+  const parsed = z
+    .object({
+      userId: z.string().min(1),
+      status: OrderStatusSchema.default("pending"),
+      items: z
+        .array(
+          z.object({
+            productId: z.string().min(1),
+            quantity: z.number().int().min(1).max(99),
+          }),
+        )
+        .min(1),
+      shipping_address: z.custom<Json>().nullable().optional(),
+      payment_method: z.string().nullable().optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return err("Invalid input");
+
+  const adminRes = await requireAdmin();
+  if (!adminRes.success) return adminRes;
+  const { client, user } = adminRes.data;
+
+  const uniqueIds = Array.from(new Set(parsed.data.items.map((i) => i.productId)));
+  const { data: products, error: productsError } = await client
+    .from("products")
+    .select("id,title,price")
+    .in("id", uniqueIds);
+  if (productsError) return err(productsError.message);
+
+  const byId = new Map<string, { id: string; title: string; price: number }>();
+  for (const p of (products as Array<{ id: string; title: string; price: number }> | null) ?? []) {
+    byId.set(p.id, p);
+  }
+
+  const items = parsed.data.items.map((i) => {
+    const product = byId.get(i.productId);
+    if (!product) return null;
+    return {
+      product_id: product.id,
+      title: product.title,
+      unit_price: product.price,
+      quantity: i.quantity,
+    };
+  });
+
+  if (items.some((i) => i === null)) return err("One or more products were not found");
+
+  const total = (items as Array<{ unit_price: number; quantity: number }>).reduce(
+    (sum, i) => sum + i.unit_price * i.quantity,
+    0,
+  );
+
+  const currency = "USD";
+  const { data: order, error: orderError } = await client
+    .from("orders")
+    .insert({
+      user_id: parsed.data.userId,
+      status: parsed.data.status,
+      total,
+      currency,
+      shipping_address: parsed.data.shipping_address ?? null,
+      payment_method: parsed.data.payment_method ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (orderError || !order) return err(orderError?.message ?? "Order creation failed");
+
+  const orderId = (order as Pick<OrderRow, "id">).id;
+  const { error: itemsError } = await client.from("order_items").insert(
+    (items as Array<{ product_id: string; title: string; unit_price: number; quantity: number }>).map(
+      (i) => ({ ...i, order_id: orderId }),
+    ),
+  );
+  if (itemsError) return err(itemsError.message);
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    action: "order.create",
+    entityType: "order",
+    entityId: orderId,
+    metadata: { userId: parsed.data.userId, status: parsed.data.status, total, currency },
+  });
+
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
+  return ok({ orderId });
 }

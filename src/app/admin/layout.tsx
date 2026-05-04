@@ -32,7 +32,7 @@ export default async function AdminLayout({
   const { data } = await supabase.auth.getUser();
   const userId = data.user?.id;
 
-  if (!userId) redirect("/login?next=/admin/products");
+  if (!userId) redirect("/login?next=/admin");
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -88,15 +88,18 @@ export default async function AdminLayout({
         <div className="space-y-1">
           <div className="text-sm font-semibold tracking-tight">Admin</div>
           <div className="text-sm text-muted-foreground">
-            Import and manage products.
+            Manage orders and products.
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link href="/admin/import">Import</Link>
+            <Link href="/admin/orders">Orders</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/admin/products">Products</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/import">Import</Link>
           </Button>
         </div>
       </div>

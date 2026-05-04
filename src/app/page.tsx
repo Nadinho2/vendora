@@ -238,11 +238,6 @@ export default async function Home({
               <div className="mt-1 text-sm text-muted-foreground">
                 Import products from the Admin dashboard to populate the storefront.
               </div>
-              <div className="mt-6">
-                <Button asChild className="rounded-2xl">
-                  <a href="/admin/import">Go to Admin</a>
-                </Button>
-              </div>
             </Card>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
