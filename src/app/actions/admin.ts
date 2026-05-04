@@ -13,11 +13,14 @@ async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_admin")
+    .select("is_admin,role")
     .eq("id", userId)
     .maybeSingle();
 
-  if (!profile?.is_admin) redirect("/");
+  const profileValue = profile as { is_admin?: boolean | null; role?: string | null } | null;
+  const role = (profileValue?.role ?? "").toLowerCase();
+  const isAdmin = role === "admin" || profileValue?.is_admin === true;
+  if (!isAdmin) redirect("/");
   return supabase;
 }
 

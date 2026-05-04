@@ -73,7 +73,8 @@ function SiteHeaderInner() {
             const profileValue = profile as
               | { is_admin?: boolean | null; role?: string | null }
               | null;
-            const isAdminValue = profileValue?.role === "admin" || profileValue?.is_admin === true;
+            const role = (profileValue?.role ?? "").toLowerCase();
+            const isAdminValue = role === "admin" || profileValue?.is_admin === true;
             setIsAdmin(isAdminValue);
           });
       } else {

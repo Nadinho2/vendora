@@ -48,7 +48,8 @@ export default async function AccountPage() {
 
   const name = profileValue?.full_name ?? user.user_metadata?.full_name ?? null;
   const email = user.email ?? profileValue?.email ?? null;
-  const isAdmin = profileValue?.role === "admin" || profileValue?.is_admin === true;
+  const role = (profileValue?.role ?? "").toLowerCase();
+  const isAdmin = role === "admin" || profileValue?.is_admin === true;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">

@@ -36,7 +36,8 @@ export default async function AdminHomePage() {
     .maybeSingle();
 
   const profileValue = profile as { is_admin?: boolean | null; role?: string | null } | null;
-  const isAdmin = profileValue?.role === "admin" || profileValue?.is_admin === true;
+  const role = (profileValue?.role ?? "").toLowerCase();
+  const isAdmin = role === "admin" || profileValue?.is_admin === true;
   if (!isAdmin) redirect("/");
 
   redirect("/admin/orders");
