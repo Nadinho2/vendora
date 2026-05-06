@@ -113,7 +113,11 @@ export default async function CheckoutPage({
             {buyNowProduct ? "Buy Now checkout" : "Cart checkout"}
           </div>
           <div className="mt-6">
-            <CheckoutForm productId={buyNowProduct?.id} />
+            <CheckoutForm
+              productId={buyNowProduct?.id}
+              userEmail={userEmail}
+              brandName="Vendora"
+            />
           </div>
         </Card>
       </div>

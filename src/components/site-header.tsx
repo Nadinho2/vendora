@@ -43,6 +43,8 @@ function SiteHeaderInner() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const qFromUrl = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(qFromUrl);
 
   const search = searchParams.toString();
   const currentPath = `${pathname}${search ? `?${search}` : ""}`;
@@ -96,6 +98,10 @@ function SiteHeaderInner() {
       subscription.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    setQuery(qFromUrl);
+  }, [qFromUrl]);
 
   async function handleSignOut() {
     const issue = getSupabaseEnvIssue();
@@ -151,6 +157,8 @@ function SiteHeaderInner() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 name="q"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search products…"
                 className="h-11 pl-9 pr-24 rounded-2xl bg-card/40 backdrop-blur"
                 autoComplete="off"
@@ -246,6 +254,8 @@ function SiteHeaderInner() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 name="q"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search products…"
                 className="h-11 w-full rounded-2xl bg-card/40 pl-9 pr-3 backdrop-blur"
                 autoComplete="off"
