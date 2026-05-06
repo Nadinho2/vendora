@@ -9,14 +9,7 @@ import { toast } from "sonner";
 import { removeCartItem, updateCartItemQuantity } from "@/app/actions/cart";
 import { Button } from "@/components/ui/button";
 import type { CartItemWithProduct } from "@/lib/store/cart";
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+import { formatMoney } from "@/lib/utils";
 
 export function CartItemRow({ item }: { item: CartItemWithProduct }) {
   const [pending, startTransition] = useTransition();
@@ -36,6 +29,7 @@ export function CartItemRow({ item }: { item: CartItemWithProduct }) {
               src={product.images[0]}
               alt={product.title}
               fill
+            unoptimized
               className="object-cover"
             />
           ) : null}

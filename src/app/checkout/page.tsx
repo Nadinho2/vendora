@@ -4,15 +4,8 @@ import { CheckoutForm } from "@/components/checkout-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getCartItems } from "@/lib/store/cart";
+import { formatMoney } from "@/lib/utils";
 import { getProductById } from "@/lib/store/products";
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 export default async function CheckoutPage({
   searchParams,

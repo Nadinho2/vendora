@@ -24,6 +24,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
                 src={src}
                 alt={title}
                 fill
+                unoptimized
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
               />
@@ -37,7 +38,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
         <DialogContent className="max-w-5xl overflow-hidden">
           <div className="grid gap-0 md:grid-cols-2">
             <div className="relative aspect-square bg-muted/30 md:aspect-auto md:h-full">
-              {src ? <Image src={src} alt={title} fill className="object-cover" /> : null}
+              {src ? <Image src={src} alt={title} fill unoptimized className="object-cover" /> : null}
             </div>
             <div className="p-6">
               <div className="text-sm font-semibold tracking-tight">Images</div>
@@ -52,7 +53,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
                       i === active && "ring-2 ring-ring ring-offset-2 ring-offset-background",
                     )}
                   >
-                    <Image src={img} alt={title} fill className="object-cover" />
+                    <Image src={img} alt={title} fill unoptimized className="object-cover" />
                   </button>
                 ))}
               </div>
@@ -72,7 +73,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
                 i === active && "ring-2 ring-ring ring-offset-2 ring-offset-background",
               )}
             >
-              <Image src={img} alt={title} fill className="object-cover" />
+              <Image src={img} alt={title} fill unoptimized className="object-cover" />
             </button>
           ))}
         </div>

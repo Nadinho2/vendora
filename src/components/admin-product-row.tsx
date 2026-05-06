@@ -10,14 +10,7 @@ import { toast } from "sonner";
 import { deleteProduct } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/lib/store/products";
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+import { formatMoney } from "@/lib/utils";
 
 export function AdminProductRow({ product }: { product: Product }) {
   const router = useRouter();
@@ -30,7 +23,13 @@ export function AdminProductRow({ product }: { product: Product }) {
         className="relative h-12 w-12 overflow-hidden rounded-xl border border-border bg-muted/30"
       >
         {product.images?.[0] ? (
-          <Image src={product.images[0]} alt={product.title} fill className="object-cover" />
+          <Image
+            src={product.images[0]}
+            alt={product.title}
+            fill
+            unoptimized
+            className="object-cover"
+          />
         ) : null}
       </Link>
 

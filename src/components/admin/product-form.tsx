@@ -110,12 +110,25 @@ export function ProductForm({
       }
 
       if (uploadedUrls.length) {
-        setDraft((d) => {
-          const current = d.images.map((s) => s.trim()).filter(Boolean);
-          const next = Array.from(new Set([...current, ...uploadedUrls]));
-          return { ...d, images: next.length ? [...next, ""] : [""] };
-        });
-        toast.success(`Uploaded ${uploadedUrls.length} image${uploadedUrls.length === 1 ? "" : "s"}.`);
+        const current = draft.images.map((s) => s.trim()).filter(Boolean);
+        const next = Array.from(new Set([...current, ...uploadedUrls]));
+
+        setDraft((d) => ({ ...d, images: next.length ? [...next, ""] : [""] }));
+        toast.success(
+          `Uploaded ${uploadedUrls.length} image${uploadedUrls.length === 1 ? "" : "s"}.`,
+        );
+
+        if (productId) {
+          startTransition(async () => {
+            const res = await updateProduct({ id: productId, productData: { images: next } });
+            if (!res.success) {
+              toast.error(res.error);
+              return;
+            }
+            toast.success("Saved images.");
+            router.refresh();
+          });
+        }
       }
     } finally {
       setUploading(false);

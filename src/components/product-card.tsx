@@ -10,16 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
 import type { Product } from "@/lib/store/products";
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 function Stars({ value }: { value: number }) {
   const stars = Math.max(0, Math.min(5, value));
@@ -63,6 +55,7 @@ export function ProductCard({ product }: { product: Product }) {
                 src={image}
                 alt={product.title}
                 fill
+                unoptimized
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
               />
@@ -101,6 +94,7 @@ export function ProductCard({ product }: { product: Product }) {
                           src={safeImages[0]}
                           alt={product.title}
                           fill
+                          unoptimized
                           className="object-cover"
                         />
                       ) : null}
@@ -199,6 +193,7 @@ export function ProductCard({ product }: { product: Product }) {
                         src={safeImages[0]}
                         alt={product.title}
                         fill
+                        unoptimized
                         className="object-cover"
                       />
                     ) : null}

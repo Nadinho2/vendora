@@ -5,14 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getSupabaseEnvIssue } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function formatMoney(value: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+import { formatMoney } from "@/lib/utils";
 
 export default async function OrderPage({
   params,

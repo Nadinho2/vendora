@@ -554,7 +554,7 @@ export async function createOrder(input: unknown): Promise<ActionResult<{ orderI
   if (items.length === 0) return err("Cart is empty");
 
   const total = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
-  const currency = "USD";
+  const currency = "NGN";
 
   const { data: order, error: orderError } = await client
     .from("orders")
@@ -749,7 +749,7 @@ export async function createAdminOrder(input: unknown): Promise<ActionResult<{ o
     0,
   );
 
-  const currency = "USD";
+  const currency = "NGN";
   const { data: order, error: orderError } = await client
     .from("orders")
     .insert({

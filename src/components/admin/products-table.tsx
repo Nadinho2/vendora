@@ -24,15 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Product } from "@/lib/store/products";
-import { cn } from "@/lib/utils";
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+import { cn, formatMoney } from "@/lib/utils";
 
 export function AdminProductsTable({ products }: { products: Product[] }) {
   const [q, setQ] = useState("");
@@ -121,7 +113,7 @@ export function AdminProductsTable({ products }: { products: Product[] }) {
                     <TableCell className="py-2">
                       <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
                         {img ? (
-                          <Image src={img} alt={p.title} fill className="object-cover" />
+                          <Image src={img} alt={p.title} fill unoptimized className="object-cover" />
                         ) : null}
                       </div>
                     </TableCell>
@@ -198,7 +190,7 @@ export function AdminProductsTable({ products }: { products: Product[] }) {
               <Card className="rounded-3xl border-border/60 bg-card/40 p-4 backdrop-blur">
                 <div className="flex gap-4">
                   <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
-                    {img ? <Image src={img} alt={p.title} fill className="object-cover" /> : null}
+                    {img ? <Image src={img} alt={p.title} fill unoptimized className="object-cover" /> : null}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">

@@ -4,14 +4,7 @@ import { CartItemRow } from "@/components/cart-item-row";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getCartItems } from "@/lib/store/cart";
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+import { formatMoney } from "@/lib/utils";
 
 export default async function CartPage() {
   const { items, userEmail } = await getCartItems();

@@ -98,7 +98,7 @@ export async function checkout(input: { productId?: string; mode?: "affiliate" |
   if (items.length === 0) redirect("/cart");
 
   const total = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
-  const currency = "USD";
+  const currency = "NGN";
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
