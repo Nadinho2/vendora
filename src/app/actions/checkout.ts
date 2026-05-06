@@ -152,129 +152,144 @@ export async function createWhatsAppOrder(input: {
   productId?: string;
   customer: { fullName: string; phone: string; address: string; note?: string };
 }) {
-  const { supabase, user } = await requireUser();
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) return { success: false as const, error: "Unauthorized" };
+    const user = userData.user;
+    if (!user) return { success: false as const, error: "Unauthorized" };
 
-  const fullName = input.customer.fullName.trim();
-  const phone = input.customer.phone.trim();
-  const address = input.customer.address.trim();
-  const note = (input.customer.note ?? "").trim();
+    const fullName = input.customer.fullName.trim();
+    const phone = input.customer.phone.trim();
+    const address = input.customer.address.trim();
+    const note = (input.customer.note ?? "").trim();
 
-  if (!fullName || !phone || !address) {
-    throw new Error("Missing customer details");
-  }
-
-  let items: Array<{ product_id: string; title: string; unit_price: number; quantity: number }> = [];
-
-  if (input.productId) {
-    const { data: product, error } = await supabase
-      .from("products")
-      .select("id,title,price")
-      .eq("id", input.productId)
-      .maybeSingle();
-
-    if (error) throw new Error(error.message);
-    if (!product) throw new Error("Product not found");
-
-    items = [
-      {
-        product_id: product.id,
-        title: product.title,
-        unit_price: product.price,
-        quantity: 1,
-      },
-    ];
-  } else {
-    type ProductLite = { id: string; title: string; price: number };
-
-    function toProductLite(value: unknown): ProductLite | null {
-      const v = Array.isArray(value) ? value[0] : value;
-      if (!v || typeof v !== "object") return null;
-      const obj = v as Record<string, unknown>;
-      if (typeof obj.id !== "string") return null;
-      if (typeof obj.title !== "string") return null;
-      if (typeof obj.price !== "number") return null;
-      return { id: obj.id, title: obj.title, price: obj.price };
+    if (!fullName || !phone || !address) {
+      return { success: false as const, error: "Missing customer details" };
     }
 
-    const { data, error } = await supabase
-      .from("cart_items")
-      .select("quantity,product:products(id,title,price)")
-      .eq("user_id", user.id);
+    let items: Array<{ product_id: string; title: string; unit_price: number; quantity: number }> = [];
 
-    if (error) throw new Error(error.message);
+    if (input.productId) {
+      const { data: product, error } = await supabase
+        .from("products")
+        .select("id,title,price")
+        .eq("id", input.productId)
+        .maybeSingle();
 
-    const rows = (data ?? []) as Array<{ quantity: number; product: unknown }>;
-    items = rows.flatMap((row) => {
-      const product = toProductLite(row.product);
-      if (!product) return [];
-      return [
+      if (error) return { success: false as const, error: "Unable to load product" };
+      if (!product) return { success: false as const, error: "Product not found" };
+
+      items = [
         {
           product_id: product.id,
           title: product.title,
           unit_price: product.price,
-          quantity: row.quantity,
+          quantity: 1,
         },
       ];
-    });
+    } else {
+      type ProductLite = { id: string; title: string; price: number };
+
+      function toProductLite(value: unknown): ProductLite | null {
+        const v = Array.isArray(value) ? value[0] : value;
+        if (!v || typeof v !== "object") return null;
+        const obj = v as Record<string, unknown>;
+        if (typeof obj.id !== "string") return null;
+        if (typeof obj.title !== "string") return null;
+        if (typeof obj.price !== "number") return null;
+        return { id: obj.id, title: obj.title, price: obj.price };
+      }
+
+      const { data, error } = await supabase
+        .from("cart_items")
+        .select("quantity,product:products(id,title,price)")
+        .eq("user_id", user.id);
+
+      if (error) return { success: false as const, error: "Unable to load cart" };
+
+      const rows = (data ?? []) as Array<{ quantity: number; product: unknown }>;
+      items = rows.flatMap((row) => {
+        const product = toProductLite(row.product);
+        if (!product) return [];
+        return [
+          {
+            product_id: product.id,
+            title: product.title,
+            unit_price: product.price,
+            quantity: row.quantity,
+          },
+        ];
+      });
+    }
+
+    if (items.length === 0) {
+      return { success: false as const, error: "Cart is empty" };
+    }
+
+    const total = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+    const currency = "NGN";
+
+    const shipping_address = {
+      full_name: fullName,
+      phone,
+      address,
+      note: note || null,
+    };
+
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        user_id: user.id,
+        status: "pending",
+        total,
+        currency,
+        shipping_address,
+        payment_method: "whatsapp",
+      })
+      .select("id")
+      .single();
+
+    if (orderError || !order) {
+      return { success: false as const, error: "Order creation failed" };
+    }
+
+    const { error: itemsError } = await supabase.from("order_items").insert(
+      items.map((i) => ({
+        order_id: order.id,
+        product_id: i.product_id,
+        title: i.title,
+        unit_price: i.unit_price,
+        quantity: i.quantity,
+      })),
+    );
+
+    if (itemsError) {
+      return { success: false as const, error: "Order item creation failed" };
+    }
+
+    if (!input.productId) {
+      const { error: clearError } = await supabase.from("cart_items").delete().eq("user_id", user.id);
+      if (clearError) return { success: false as const, error: "Unable to clear cart" };
+      revalidatePath("/cart");
+    }
+
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${order.id}`);
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${order.id}`);
+    revalidatePath("/");
+
+    return {
+      success: true as const,
+      data: {
+        orderId: order.id as string,
+        items: items.map((i) => ({ title: i.title, quantity: i.quantity })),
+        total,
+        currency,
+      },
+    };
+  } catch {
+    return { success: false as const, error: "Checkout failed" };
   }
-
-  if (items.length === 0) {
-    throw new Error("Cart is empty");
-  }
-
-  const total = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
-  const currency = "NGN";
-
-  const shipping_address = {
-    full_name: fullName,
-    phone,
-    address,
-    note: note || null,
-  };
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      user_id: user.id,
-      status: "pending",
-      total,
-      currency,
-      shipping_address,
-      payment_method: "whatsapp",
-    })
-    .select("id")
-    .single();
-
-  if (orderError || !order) throw new Error(orderError?.message ?? "Order creation failed");
-
-  const { error: itemsError } = await supabase.from("order_items").insert(
-    items.map((i) => ({
-      order_id: order.id,
-      product_id: i.product_id,
-      title: i.title,
-      unit_price: i.unit_price,
-      quantity: i.quantity,
-    })),
-  );
-
-  if (itemsError) throw new Error(itemsError.message);
-
-  if (!input.productId) {
-    const { error: clearError } = await supabase.from("cart_items").delete().eq("user_id", user.id);
-    if (clearError) throw new Error(clearError.message);
-    revalidatePath("/cart");
-  }
-
-  revalidatePath("/orders");
-  revalidatePath(`/orders/${order.id}`);
-  revalidatePath("/admin/orders");
-  revalidatePath(`/admin/orders/${order.id}`);
-  revalidatePath("/");
-
-  return {
-    orderId: order.id as string,
-    items: items.map((i) => ({ title: i.title, quantity: i.quantity })),
-    total,
-    currency,
-  };
 }

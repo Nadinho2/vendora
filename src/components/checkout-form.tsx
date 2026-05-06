@@ -120,16 +120,27 @@ export function CheckoutForm({
                 },
               });
 
+              if (!res.success) {
+                if (res.error === "Unauthorized") {
+                  const next = `/checkout${productId ? `?productId=${encodeURIComponent(productId)}` : ""}`;
+                  window.location.href = `/login?next=${encodeURIComponent(next)}`;
+                  return;
+                }
+                toast.error(res.error, { id: "whatsapp-checkout" });
+                return;
+              }
+
+              const data = res.data;
               const brand = brandName?.trim() || "Vendora";
-              const lines = res.items.map((i) => `- ${i.title} x${i.quantity}`).join("\n");
-              const totalItems = res.items.reduce((sum, i) => sum + i.quantity, 0);
+              const lines = data.items.map((i) => `- ${i.title} x${i.quantity}`).join("\n");
+              const totalItems = data.items.reduce((sum, i) => sum + i.quantity, 0);
 
               const message =
                 `Hello ${brand}, I want to place an order.%0A%0A` +
-                `Order ID: ${encodeURIComponent(res.orderId)}%0A%0A` +
+                `Order ID: ${encodeURIComponent(data.orderId)}%0A%0A` +
                 `Items:%0A${encodeURIComponent(lines)}%0A%0A` +
                 `Total items: ${totalItems}%0A` +
-                `Total: ${encodeURIComponent(formatMoney(res.total))}%0A%0A` +
+                `Total: ${encodeURIComponent(formatMoney(data.total))}%0A%0A` +
                 `Customer details:%0A` +
                 `Full name: ${encodeURIComponent(fullName.trim())}%0A` +
                 `Phone: ${encodeURIComponent(phone.trim())}%0A` +
