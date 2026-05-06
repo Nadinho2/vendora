@@ -32,7 +32,7 @@ export default async function AccountPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name,email,avatar_url,role,is_admin")
+    .select("*")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -42,6 +42,7 @@ export default async function AccountPage() {
         email?: string | null;
         avatar_url?: string | null;
         role?: string | null;
+        is_super_admin?: boolean | null;
         is_admin?: boolean | null;
       }
     | null;
@@ -49,7 +50,10 @@ export default async function AccountPage() {
   const name = profileValue?.full_name ?? user.user_metadata?.full_name ?? null;
   const email = user.email ?? profileValue?.email ?? null;
   const role = (profileValue?.role ?? "").toLowerCase();
-  const isAdmin = role === "admin" || profileValue?.is_admin === true;
+  const isAdmin =
+    profileValue?.is_super_admin === true ||
+    role === "admin" ||
+    profileValue?.is_admin === true;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
