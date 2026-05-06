@@ -87,8 +87,8 @@ export function ProductForm({
     });
   }
 
-  async function uploadImages(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  async function uploadImages(files: File[]) {
+    if (!files.length) return;
     const issue = getSupabaseEnvIssue();
     if (issue) {
       toast.error(issue);
@@ -104,7 +104,7 @@ export function ProductForm({
       const uploadedPreviewUrls: string[] = [];
       const folder = productId ?? "new";
       const localUrls: string[] = [];
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         if (file.type.startsWith("image/")) {
           try {
             const u = URL.createObjectURL(file);
@@ -114,7 +114,7 @@ export function ProductForm({
       }
       if (localUrls.length) setTransientPreviews((prev) => [...localUrls, ...prev]);
 
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         if (!file.type.startsWith("image/")) {
           toast.error(`Unsupported file: ${file.name}`);
           continue;
@@ -390,9 +390,9 @@ export function ProductForm({
                 disabled={uploading || pending}
                 className="h-11 rounded-2xl bg-background/60"
                 onChange={async (e) => {
-                  const files = e.target.files;
+                  const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
                   e.target.value = "";
-                  await uploadImages(files);
+                  await uploadImages(selectedFiles);
                 }}
               />
               <div className="text-xs text-muted-foreground">
