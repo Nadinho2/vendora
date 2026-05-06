@@ -52,6 +52,7 @@ export function ProductForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
+  const [transientPreviews, setTransientPreviews] = useState<string[]>([]);
   const [draft, setDraft] = useState<AdminProductDraft>({
     ...emptyDraft,
     ...initialValue,
@@ -69,6 +70,23 @@ export function ProductForm({
     return Number.isFinite(value) ? value : null;
   }
 
+  function canRenderImage(url: string) {
+    return new Promise<boolean>((resolve) => {
+      const img = new window.Image();
+      const timeout = window.setTimeout(() => resolve(false), 2500);
+
+      img.onload = () => {
+        window.clearTimeout(timeout);
+        resolve(true);
+      };
+      img.onerror = () => {
+        window.clearTimeout(timeout);
+        resolve(false);
+      };
+      img.src = url;
+    });
+  }
+
   async function uploadImages(files: FileList | null) {
     if (!files || files.length === 0) return;
     const issue = getSupabaseEnvIssue();
@@ -82,8 +100,19 @@ export function ProductForm({
 
     setUploading(true);
     try {
-      const uploadedUrls: string[] = [];
+      const uploadedPublicUrls: string[] = [];
+      const uploadedPreviewUrls: string[] = [];
       const folder = productId ?? "new";
+      const localUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.type.startsWith("image/")) {
+          try {
+            const u = URL.createObjectURL(file);
+            localUrls.push(u);
+          } catch {}
+        }
+      }
+      if (localUrls.length) setTransientPreviews((prev) => [...localUrls, ...prev]);
 
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) {
@@ -102,7 +131,7 @@ export function ProductForm({
         });
 
         if (error) {
-          toast.error(error.message);
+          toast.error(`Upload failed: ${error.message}`);
           continue;
         }
 
@@ -112,34 +141,54 @@ export function ProductForm({
           continue;
         }
 
-        try {
-          const res = await fetch(data.publicUrl, { method: "HEAD", cache: "no-store" });
-          if (res.ok) {
-            uploadedUrls.push(data.publicUrl);
-            continue;
-          }
-        } catch {}
+        const publicOk = await canRenderImage(data.publicUrl);
+        if (publicOk) {
+          uploadedPublicUrls.push(data.publicUrl);
+          continue;
+        }
 
-        const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60);
+        const { data: signed, error: signedError } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(path, 60 * 60);
+        if (signedError) {
+          toast.error(`Preview failed: ${signedError.message}`);
+          continue;
+        }
+
         if (signed?.signedUrl) {
-          toast.error(
-            "Storage bucket is not publicly readable. Showing a signed preview URL. Make the bucket public for storefront images to work.",
-          );
-          uploadedUrls.push(signed.signedUrl);
-        } else {
-          toast.error(
-            "Uploaded, but the file is not publicly readable so it cannot preview. Make the storage bucket public or add a read policy.",
-          );
+          const signedOk = await canRenderImage(signed.signedUrl);
+          if (signedOk) {
+            uploadedPreviewUrls.push(signed.signedUrl);
+            toast.error(
+              "Image uploaded but bucket is not public, so it won’t show on the storefront. Make the storage bucket public to fix this.",
+            );
+          } else {
+            toast.error(
+              "Uploaded, but the file is not readable so it cannot preview. Fix bucket permissions/policies.",
+            );
+          }
         }
       }
 
-      if (uploadedUrls.length) {
+      for (const u of localUrls) {
+        try {
+          URL.revokeObjectURL(u);
+        } catch {}
+      }
+      if (localUrls.length) {
+        setTransientPreviews((prev) => prev.filter((u) => !localUrls.includes(u)));
+      }
+      if (uploadedPreviewUrls.length) {
+        setTransientPreviews((prev) => [...uploadedPreviewUrls, ...prev]);
+      }
+
+      if (uploadedPublicUrls.length) {
         const current = draft.images.map((s) => s.trim()).filter(Boolean);
-        const next = Array.from(new Set([...current, ...uploadedUrls]));
+        const next = Array.from(new Set([...current, ...uploadedPublicUrls]));
 
         setDraft((d) => ({ ...d, images: next.length ? [...next, ""] : [""] }));
         toast.success(
-          `Uploaded ${uploadedUrls.length} image${uploadedUrls.length === 1 ? "" : "s"}.`,
+          `Uploaded ${uploadedPublicUrls.length} image${uploadedPublicUrls.length === 1 ? "" : "s"}.`,
         );
 
         if (productId) {
@@ -153,6 +202,8 @@ export function ProductForm({
             router.refresh();
           });
         }
+      } else if (uploadedPreviewUrls.length) {
+        toast.error("Preview is using signed URLs and will expire. Make the bucket public to use these images on the storefront.");
       }
     } finally {
       setUploading(false);
@@ -393,9 +444,9 @@ export function ProductForm({
           <Card className="rounded-3xl border-border/60 bg-card/40 p-6 backdrop-blur">
             <div className="text-sm font-semibold tracking-tight">Preview</div>
             <div className="mt-2 text-sm text-muted-foreground">
-              {validImages.length ? (
+              {transientPreviews.length || validImages.length ? (
                 <div className="grid grid-cols-3 gap-2">
-                  {validImages.slice(0, 6).map((src) => (
+                  {[...transientPreviews, ...validImages].slice(0, 6).map((src) => (
                     <div
                       key={src}
                       className={cn("relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-muted/30")}
