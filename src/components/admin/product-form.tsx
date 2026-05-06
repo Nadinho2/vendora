@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
@@ -90,7 +91,11 @@ export function ProductForm({
           continue;
         }
 
-        const path = `products/${folder}/${crypto.randomUUID()}-${file.name}`;
+        const randomId =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const path = `products/${folder}/${randomId}-${file.name}`;
         const { error } = await supabase.storage.from(bucket).upload(path, file, {
           upsert: false,
           contentType: file.type,
@@ -106,7 +111,26 @@ export function ProductForm({
           toast.error("Upload succeeded but could not generate a public URL.");
           continue;
         }
-        uploadedUrls.push(data.publicUrl);
+
+        try {
+          const res = await fetch(data.publicUrl, { method: "HEAD", cache: "no-store" });
+          if (res.ok) {
+            uploadedUrls.push(data.publicUrl);
+            continue;
+          }
+        } catch {}
+
+        const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60);
+        if (signed?.signedUrl) {
+          toast.error(
+            "Storage bucket is not publicly readable. Showing a signed preview URL. Make the bucket public for storefront images to work.",
+          );
+          uploadedUrls.push(signed.signedUrl);
+        } else {
+          toast.error(
+            "Uploaded, but the file is not publicly readable so it cannot preview. Make the storage bucket public or add a read policy.",
+          );
+        }
       }
 
       if (uploadedUrls.length) {
@@ -321,7 +345,7 @@ export function ProductForm({
                 }}
               />
               <div className="text-xs text-muted-foreground">
-                Requires a public Supabase Storage bucket named <span className="font-medium">product-images</span>.
+                Uses Supabase Storage bucket <span className="font-medium">product-images</span>. Make it public for storefront images to work.
               </div>
             </div>
 
@@ -374,15 +398,20 @@ export function ProductForm({
                   {validImages.slice(0, 6).map((src) => (
                     <div
                       key={src}
-                      className={cn(
-                        "aspect-square rounded-2xl border border-border/60 bg-muted/30",
-                      )}
-                      style={{
-                        backgroundImage: `url(${src})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }}
-                    />
+                      className={cn("relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-muted/30")}
+                    >
+                      <Image
+                        src={src}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="(max-width: 768px) 33vw, 140px"
+                        className="object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    </div>
                   ))}
                 </div>
               ) : (
