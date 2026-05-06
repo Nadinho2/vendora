@@ -26,11 +26,22 @@ export default async function EditProductPage({
 
   if (!product) notFound();
 
+  const { data: categoriesData } = await supabase.from("products").select("category").limit(500);
+  const categories = Array.from(
+    new Set(
+      ((categoriesData as Array<{ category: string | null }> | null) ?? [])
+        .map((r) => r.category)
+        .filter((c): c is string => typeof c === "string" && c.trim().length > 0)
+        .map((c) => c.trim()),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+
   return (
     <ProductForm
       title="Edit Product"
       backHref="/admin/products"
       productId={product.id}
+      categories={categories}
       initialValue={{
         title: product.title ?? "",
         price: typeof product.price === "number" ? String(product.price) : "",

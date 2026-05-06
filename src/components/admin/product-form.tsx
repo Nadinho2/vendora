@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createProduct, updateProduct } from "@/app/actions";
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { getSupabaseEnvIssue } from "@/lib/env";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export type AdminProductDraft = {
@@ -38,20 +40,24 @@ export function ProductForm({
   initialValue,
   backHref,
   productId,
+  categories,
 }: {
   title: string;
   initialValue?: Partial<AdminProductDraft>;
   backHref: string;
   productId?: string;
+  categories?: string[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState<AdminProductDraft>({
     ...emptyDraft,
     ...initialValue,
     images: initialValue?.images?.length ? initialValue.images : [""],
   });
 
+  const categoriesId = useId();
   const validImages = useMemo(
     () => draft.images.map((s) => s.trim()).filter(Boolean),
     [draft.images],
@@ -60,6 +66,60 @@ export function ProductForm({
   function parseNumber(input: string) {
     const value = Number(input);
     return Number.isFinite(value) ? value : null;
+  }
+
+  async function uploadImages(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const issue = getSupabaseEnvIssue();
+    if (issue) {
+      toast.error(issue);
+      return;
+    }
+
+    const bucket = "product-images";
+    const supabase = createSupabaseBrowserClient();
+
+    setUploading(true);
+    try {
+      const uploadedUrls: string[] = [];
+      const folder = productId ?? "new";
+
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`Unsupported file: ${file.name}`);
+          continue;
+        }
+
+        const path = `products/${folder}/${crypto.randomUUID()}-${file.name}`;
+        const { error } = await supabase.storage.from(bucket).upload(path, file, {
+          upsert: false,
+          contentType: file.type,
+        });
+
+        if (error) {
+          toast.error(error.message);
+          continue;
+        }
+
+        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        if (!data.publicUrl) {
+          toast.error("Upload succeeded but could not generate a public URL.");
+          continue;
+        }
+        uploadedUrls.push(data.publicUrl);
+      }
+
+      if (uploadedUrls.length) {
+        setDraft((d) => {
+          const current = d.images.map((s) => s.trim()).filter(Boolean);
+          const next = Array.from(new Set([...current, ...uploadedUrls]));
+          return { ...d, images: next.length ? [...next, ""] : [""] };
+        });
+        toast.success(`Uploaded ${uploadedUrls.length} image${uploadedUrls.length === 1 ? "" : "s"}.`);
+      }
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -176,9 +236,20 @@ export function ProductForm({
                 <Input
                   value={draft.category}
                   onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
+                  list={categoriesId}
                   placeholder="e.g. Electronics"
                   className="h-11 rounded-2xl bg-background/60"
                 />
+                {categories?.length ? (
+                  <datalist id={categoriesId}>
+                    {categories.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                ) : null}
+                <div className="text-xs text-muted-foreground">
+                  Start typing to select an existing category, or enter a new one.
+                </div>
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Rating</label>
@@ -220,6 +291,25 @@ export function ProductForm({
                 <Plus className="h-4 w-4" />
                 Add
               </Button>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              <div className="text-xs font-medium text-muted-foreground">Upload</div>
+              <Input
+                type="file"
+                multiple
+                accept="image/*"
+                disabled={uploading || pending}
+                className="h-11 rounded-2xl bg-background/60"
+                onChange={async (e) => {
+                  const files = e.target.files;
+                  e.target.value = "";
+                  await uploadImages(files);
+                }}
+              />
+              <div className="text-xs text-muted-foreground">
+                Requires a public Supabase Storage bucket named <span className="font-medium">product-images</span>.
+              </div>
             </div>
 
             <div className="mt-4 space-y-3">
